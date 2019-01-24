@@ -12,7 +12,7 @@ def run():
     print_logo()
 
     # user input
-    id_from, id_to = get_itinerary(cur)
+    id_from, id_to = get_itinerary(cur)  # returns 2 arrays
 
     stops, lines = compute_route(id_from, id_to, cur)
 
@@ -61,20 +61,32 @@ def get_itinerary(cur):
     hn_to = input("House number: ")
     hon_to = input("House orientation number: ")
 
+    id_from = []
+    id_to = []
+
     cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_from, hon_from, street_from))
-    id_from = cur.fetchone()[0]
+    it = cur.fetchone()
+
+    while it is not None:
+        id_from.append(it[0])
+        it = cur.fetchone()
 
     cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_to, hon_to, street_to))
-    id_to = cur.fetchone()[0]
+    it = cur.fetchone()
+
+    while it is not None:
+        id_to.append(it[0])
+        it = cur.fetchone()
 
     return id_from, id_to
 
 
 def compute_route(id_from, id_to, cur):
+
     # dijkstra algorithm
     cur.execute(
         "SELECT zastavky.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, trasy.l_vlak, trasy.l_lod, node "
-        "FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', %s, %s, false) "
+        "FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', %s, %s) "
         "JOIN zastavky ON node = zastavky.gid "
         "LEFT JOIN trasy ON edge = trasy.gid;", (id_from, id_to))
 
