@@ -65,7 +65,7 @@ def get_route(cur):
         stops, lines = compute_route(id_from, id_to, cur)
 
         write_output(stops, lines, address_from, address_to)
-    except psycopg2.Error:
+    except (psycopg2.Error, TypeError):
         log.critical("Invalid input")
 
 
@@ -74,7 +74,6 @@ def get_itinerary(cur):
     street_from = input("Street: ").strip()
     hn_from = input("House number: ").strip()
     hon_from = input("House orientation number: ").strip()
-    address_from = "{} {}/{}".format(street_from, hn_from, hon_from)
 
     print("\nWhere do you want to go?")
     street_to = input("Street: ").strip()
@@ -84,27 +83,54 @@ def get_itinerary(cur):
 
     if hn_from == "" and hon_from == "":
         cur.execute("SELECT * FROM findvertexidst('{}')".format(street_from))
+        it = cur.fetchone()
+        address_from = "{} {}/{}".format(it[1], it[2], it[3] if it[3] is not None else "")
+
     elif hn_from == "":
         cur.execute("SELECT * FROM findvertexidori(%s, %s)", (hon_from, street_from))
+        it = cur.fetchone()
+        cur.execute("SELECT ulice, c_domovni, c_orientacni FROM adr WHERE ulice = %s AND c_orientacni = %s", (street_from, hon_from))
+        ul = cur.fetchone()
+        address_from = "{} {}/{}".format(ul[0], ul[1], ul[2] if ul[2] is not None else "")
+
     elif hon_from == "":
         cur.execute("SELECT * FROM findvertexidcd(%s, %s)", (hn_from, street_from))
+        it = cur.fetchone()
+        cur.execute("SELECT ulice, c_domovni, c_orientacni FROM adr WHERE ulice = %s AND c_domovni = %s", (street_from, hn_from))
+        ul = cur.fetchone()
+        address_from = "{} {}/{}".format(ul[0], ul[1], ul[2] if ul[2] is not None else "")
+
     else:
         cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_from, hon_from, street_from))
+        it = cur.fetchone()
+        address_from = "{} {}/{}".format(street_from, hn_from, hon_from)
 
-    it = cur.fetchone()
     id_from = it[0]
-
 
     if hn_to == "" and hon_to == "":
         cur.execute("SELECT * FROM findvertexidst('{}')".format(street_to))
+        it = cur.fetchone()
+        address_to = "{} {}/{}".format(it[1], it[2], it[3] if it[3] is not None else "")
+
     elif hn_to == "":
         cur.execute("SELECT * FROM findvertexidori(%s, %s)", (hon_to, street_to))
+        it = cur.fetchone()
+        cur.execute("SELECT ulice, c_domovni, c_orientacni FROM adr WHERE ulice = %s AND c_orientacni = %s", (street_to, hon_to))
+        ul = cur.fetchone()
+        address_to = "{} {}/{}".format(ul[0], ul[1], ul[2] if ul[2] is not None else "")
+
     elif hon_to == "":
         cur.execute("SELECT * FROM findvertexidcd(%s, %s)", (hn_to, street_to))
+        it = cur.fetchone()
+        cur.execute("SELECT ulice, c_domovni, c_orientacni FROM adr WHERE ulice = %s AND c_domovni = %s", (street_to, hn_to))
+        ul = cur.fetchone()
+        address_to= "{} {}/{}".format(ul[0], ul[1], ul[2] if ul[2] is not None else "")
+
     else:
         cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_to, hon_to, street_to))
+        it = cur.fetchone()
+        address_to = "{} {}/{}".format(street_to, hn_to, hon_to)
 
-    it = cur.fetchone()
     id_to = it[0]
 
     return id_from, id_to, address_from, address_to
