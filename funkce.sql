@@ -40,7 +40,6 @@ $id$ LANGUAGE plpgsql;
 SELECT * FROM FindVertexID(612, 79, 'Evropská');
 
 --funkce kam zadas id a vyhodi ti nazev zastavky 
---SELECT z.zast_nazev, v.id FROM zastavky z, trasy_vertices_pgr v WHERE v.id = 7 order by v.geom <-> z.geom asc limit 1;
 
 --CREATE OR REPLACE FUNCTION FindStationName(id INTEGER)
 --RETURNS VARCHAR AS $name$
@@ -55,6 +54,20 @@ SELECT * FROM FindVertexID(612, 79, 'Evropská');
 
 --SELECT * FROM FindStationName(6655);
 
+CREATE OR REPLACE FUNCTION FindVertexID2(cd INTEGER, u VARCHAR)
+RETURNS INTEGER AS $id2$
+declare 
+	id2 integer;
+BEGIN 
+	SELECT v.id INTO id2 FROM adr a, trasy_vertices_pgr v 
+	WHERE a.c_domovni = cd 
+	AND a.ulice = u
+	ORDER BY (a.geom)<->(v.geom) asc limit 1;
+	RETURN id2;
+END;
+$id2$ LANGUAGE plpgsql;
+
+SELECT * FROM FindVertexID(646, 'Úhlová');
 
 
 
