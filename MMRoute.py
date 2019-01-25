@@ -37,8 +37,9 @@ def connect_database(host, database, user, password):
 
 
 def print_logo():
-    print("--------------------------------------")
-    print("""      
+    print("")
+    print("""
+-------------------------------------------
       __  __ __  __ _____   ____   _____  
      |  \/  |  \/  |  __ \ / __ \ / ____| ©
      | \  / | \  / | |  | | |  | | (___  
@@ -47,7 +48,7 @@ def print_logo():
      |_|  |_|_|  |_|_____/ \____/|_____/ 
 
       Created by: Maru & Michael 2019                       
-    --------------------------------------""")
+-------------------------------------------""")
 
 
 def get_itinerary(cur):
@@ -85,10 +86,10 @@ def compute_route(id_from, id_to, cur):
 
     # dijkstra algorithm
     cur.execute(
-        "SELECT zastavky.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, trasy.l_vlak, trasy.l_lod, node "
-        "FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', %s, %s, false) "
-        "JOIN zastavky ON node = zastavky.zast_uzel_ "
-        "LEFT JOIN trasy ON edge = trasy.gid;", (id_from, id_to))
+        "SELECT z.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, trasy.l_vlak, trasy.l_lod, node "
+        "FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', %s, %s) "
+        "LEFT JOIN (SELECT DISTINCT(zastavky.zast_uzel_), zastavky.zast_nazev FROM zastavky) AS z ON node = z.zast_uzel_ "
+        "LEFT JOIN trasy ON edge = trasy.gid ORDER BY seq;", (id_from, id_to))
 
     all_lines = []
     all_stops = []
@@ -127,13 +128,20 @@ def compute_route(id_from, id_to, cur):
                         break
                 else:
                     break
+
+        if i == 0:
+            lns.append("Get on: " + max_reach[0])
+            lns.extend([max_reach[0]]*(max_reach[1]))
+        else:
+            lns.append("Transfer to: " + max_reach[0])
+            lns.extend([max_reach[0]]*(max_reach[1]))
+
         if max_reach[1] == 0:
             i += 1
         else:
             i += max_reach[1] + 1
-        lns.extend([max_reach[0]]*(max_reach[1]+1))
 
-    lns.append(lns[len(lns)-1])
+    lns.append("Get off here!")
 
     return all_stops, lns
 
