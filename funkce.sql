@@ -83,6 +83,17 @@ END;
 $id$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION FindVertexIDst(u VARCHAR)
+RETURNS INTEGER AS $id$
+declare 
+	id integer;
+BEGIN 
+	SELECT v.id INTO id FROM adr a, trasy_vertices_pgr v 
+	WHERE a.ulice = u
+	ORDER BY (a.geom)<->(v.geom) asc limit 1;
+	RETURN id;
+END;
+$id$ LANGUAGE plpgsql;
 
 
 
