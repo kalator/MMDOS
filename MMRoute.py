@@ -82,9 +82,6 @@ def get_itinerary(cur):
     hon_to = input("House orientation number: ").strip()
     address_to = "{} {}/{}".format(street_to, hn_to, hon_to)
 
-    id_from = []
-    id_to = []
-
     if hn_from == "" and hon_from == "":
         cur.execute("SELECT * FROM findvertexidst('{}')".format(street_from))
     elif hn_from == "":
@@ -95,10 +92,8 @@ def get_itinerary(cur):
         cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_from, hon_from, street_from))
 
     it = cur.fetchone()
+    id_from = it[0]
 
-    while it is not None:
-        id_from.append(it[0])
-        it = cur.fetchone()
 
     if hn_to == "" and hon_to == "":
         cur.execute("SELECT * FROM findvertexidst('{}')".format(street_to))
@@ -110,10 +105,7 @@ def get_itinerary(cur):
         cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_to, hon_to, street_to))
 
     it = cur.fetchone()
-
-    while it is not None:
-        id_to.append(it[0])
-        it = cur.fetchone()
+    id_to = it[0]
 
     return id_from, id_to, address_from, address_to
 
