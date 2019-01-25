@@ -86,8 +86,8 @@ def compute_route(id_from, id_to, cur):
     # dijkstra algorithm
     cur.execute(
         "SELECT zastavky.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, trasy.l_vlak, trasy.l_lod, node "
-        "FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', %s, %s) "
-        "JOIN zastavky ON node = zastavky.gid "
+        "FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', %s, %s, false) "
+        "JOIN zastavky ON node = zastavky.zast_uzel_ "
         "LEFT JOIN trasy ON edge = trasy.gid;", (id_from, id_to))
 
     all_lines = []
