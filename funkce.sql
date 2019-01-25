@@ -24,36 +24,36 @@
 --FROM pgr_dijkstra('SELECT gid AS id, source, target, CAST(shape_leng AS REAL) as cost FROM trasy',537,1202); 
 
 CREATE OR REPLACE FUNCTION FindVertexID(cd INTEGER, co INTEGER, u VARCHAR)
-RETURNS TABLE(
-id BIGINT
-	) as $$
+RETURNS INTEGER AS $id$
+declare 
+	id integer;
 BEGIN 
-	RETURN QUERY SELECT v.id FROM adr a, trasy_vertices_pgr v 
+	SELECT v.id INTO id FROM adr a, trasy_vertices_pgr v 
 	WHERE a.c_domovni = cd 
 	AND a.c_orientacni = co 
 	AND a.ulice = u
-	ORDER BY (a.geom)<->(v.geom) asc limit 4;
- END; 
-$$
-LANGUAGE plpgsql;
+	ORDER BY (a.geom)<->(v.geom) asc limit 1;
+	RETURN id;
+END;
+$id$ LANGUAGE plpgsql;
 
 SELECT * FROM FindVertexID(612, 79, 'Evropská');
 
 --funkce kam zadas id a vyhodi ti nazev zastavky 
 --SELECT z.zast_nazev, v.id FROM zastavky z, trasy_vertices_pgr v WHERE v.id = 7 order by v.geom <-> z.geom asc limit 1;
 
-CREATE OR REPLACE FUNCTION FindStationName(id INTEGER)
-RETURNS VARCHAR AS $name$
-declare 
-	name varchar;
-BEGIN 
-	SELECT z.zast_nazev INTO name FROM zastavky z
-	WHERE z.zast_uzel_ = id LIMIT 1; 
-	RETURN name;
-END;
-$name$ LANGUAGE plpgsql;
+--CREATE OR REPLACE FUNCTION FindStationName(id INTEGER)
+--RETURNS VARCHAR AS $name$
+--declare 
+	--name varchar;
+--BEGIN 
+	--SELECT z.zast_nazev INTO name FROM zastavky z
+	--WHERE z.zast_uzel_ = id LIMIT 1; 
+	--RETURN name;
+--END;
+--$name$ LANGUAGE plpgsql;
 
-SELECT * FROM FindStationName(6655);
+--SELECT * FROM FindStationName(6655);
 
 
 
