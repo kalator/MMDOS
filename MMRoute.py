@@ -65,35 +65,50 @@ def get_route(cur):
         stops, lines = compute_route(id_from, id_to, cur)
 
         write_output(stops, lines, address_from, address_to)
-
     except psycopg2.Error:
-        log.critical("Invalid input!")
+        log.critical("Invalid input")
 
 
 def get_itinerary(cur):
     print("\nStart with typing from where you want to travel:")
-    street_from = input("Street: ")
-    hn_from = input("House number: ")
-    hon_from = input("House orientation number: ")
+    street_from = input("Street: ").strip()
+    hn_from = input("House number: ").strip()
+    hon_from = input("House orientation number: ").strip()
     address_from = "{} {}/{}".format(street_from, hn_from, hon_from)
 
     print("\nWhere do you want to go?")
-    street_to = input("Street: ")
-    hn_to = input("House number: ")
-    hon_to = input("House orientation number: ")
+    street_to = input("Street: ").strip()
+    hn_to = input("House number: ").strip()
+    hon_to = input("House orientation number: ").strip()
     address_to = "{} {}/{}".format(street_to, hn_to, hon_to)
 
     id_from = []
     id_to = []
 
-    cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_from, hon_from, street_from))
+    if hn_from == "" and hon_from == "":
+        cur.execute("SELECT * FROM findvertexidst('{}')".format(street_from))
+    elif hn_from == "":
+        cur.execute("SELECT * FROM findvertexidori(%s, %s)", (hon_from, street_from))
+    elif hon_from == "":
+        cur.execute("SELECT * FROM findvertexidcd(%s, %s)", (hn_from, street_from))
+    else:
+        cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_from, hon_from, street_from))
+
     it = cur.fetchone()
 
     while it is not None:
         id_from.append(it[0])
         it = cur.fetchone()
 
-    cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_to, hon_to, street_to))
+    if hn_to == "" and hon_to == "":
+        cur.execute("SELECT * FROM findvertexidst('{}')".format(street_to))
+    elif hn_to == "":
+        cur.execute("SELECT * FROM findvertexidori(%s, %s)", (hon_to, street_to))
+    elif hon_to == "":
+        cur.execute("SELECT * FROM findvertexidcd(%s, %s)", (hn_to, street_to))
+    else:
+        cur.execute("SELECT * FROM findvertexid(%s, %s, %s)", (hn_to, hon_to, street_to))
+
     it = cur.fetchone()
 
     while it is not None:
@@ -177,10 +192,10 @@ def write_output(stops, lines, address_from, address_to):
 
 
 def yes_no(question):
-    answer = ""
-    while answer.lower() not in ("y", "n"):
+    answer = "answer"
+    while answer.lower().strip() not in ("y", "n", ""):
         answer = input(question + ": ")
-    if answer.lower() == "y":
+    if answer.lower().strip() in ("y", ""):
         return True
     else:
         return False
