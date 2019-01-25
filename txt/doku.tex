@@ -1,0 +1,198 @@
+\documentclass[a4paper, 12pt]{article}
+\usepackage[total={17cm,25cm}, top=2.5cm, left=2.5cm, right=2.5cm,  includefoot]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{gensymb}
+\usepackage{graphicx}
+\graphicspath{ {} }
+\usepackage[czech]{babel}
+\usepackage{enumitem}
+\usepackage{pdfpages}
+\usepackage{amsmath}
+\usepackage{verbatim}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{amssymb}
+\usepackage{hyperref}
+
+\usepackage{listings}
+\usepackage{color}
+ 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+ 
+\lstset{style=mystyle}
+
+
+\pagestyle{empty} % vypne číslování stránek
+
+
+
+
+%\usepackage[OT2,OT1]{fontenc}
+\newcommand\cyr
+{
+\renewcommand\rmdefault{wncyr}
+\renewcommand\sfdefault{wncyss}
+\renewcommand\encodingdefault{OT2}
+\normalfont
+\selectfont
+}
+\DeclareTextFontCommand{\textcyr}{\cyr}
+\def\cprime{\char"7E }
+\def\cdprime{\char"7F }
+\def\eoborotnoye{\char’013}
+\def\Eoborotnoye{\char’003}
+
+\setlength\parindent{0pt}
+
+
+\begin{document}
+
+
+
+\begin{titlepage}
+\begin{center}
+\noindent
+\Large \textbf{České vysoké učení technické v Praze }\\ Fakulta stavební
+\vspace{5cm}
+
+\Large
+
+%vložení loga cvut
+%\begin{figure}[h!]
+%	\centering
+%	\includegraphics[width=7cm]{logo.png}
+%\end{figure}
+
+\vspace{4cm}
+
+155UZPD: Semestrální projekt \\
+\Huge
+
+\textbf{MMDOS - Síťové analýzy PID}
+\vspace{11cm}
+
+\large
+Únor 2019 \hspace{5cm} Petra Mariana Millarová, Michael Kala\\
+
+\end{center}
+
+\end{titlepage}
+
+
+
+
+\pagestyle{plain}     % zapne obyčejné číslování
+\setcounter{page}{1}  % nastaví čítač stránek znovu od jedné
+
+%\tableofcontents
+%\newpage
+
+\section{Cíl projektu}
+Cílem semestrálního projektu bylo vytvoření konzolové aplikace MMDOS, jež provádí síťové analýzy nad daty PID za využití pgRouting, extenze PostGISu. Uživatel má možnost zadat výchozí a cílovou adresu, aplikace vyhledá nejbližší zastávky hromadné dopravy, provede síťovou analýzu a vrátí nejkratší cestu. Uživateli se poté zobrazí seznam zastávek a linek, které by měl po cestě využít.
+
+\newpage
+\section{Data}
+\begin{itemize}
+	\item Adresní místa RÚIAN Hlavního města Prahy, staženo z Nahlížení do KN [1] (dokumentace: \url{http://vdp.cuzk.cz/vymenny_format/csv/ad-csv-struktura.pdf})
+	\item Síť tras linek Pražské integrované dopravy, staženo z portálu Opendata Hlavního města Prahy [2] (dokumentace: \url{http://www.geoportalpraha.cz/cs/fulltext_geoportal?id=6F576389-385E-4E38-831A-8DE6EFB52C3A#.XErv8stKiV4})
+	\item Zastávky PID - jednotlivé označníky, staženo z portálu Opendata Hlavního města Prahy [2] (dokumentace: \url{http://www.geoportalpraha.cz/cs/fulltext_geoportal?id=63EF19FE-C2FB-4FC2-8C2D-EEBB72C6B81A#.XErxJ8tKiV4})
+\end{itemize}
+
+\newpage
+\section{Zpracování dat}
+\subsection{Adresní místa RUIAN}
+Data byla stažena ve formátu \texttt{csv}. Následně pomocí jazyka AWK byl v shellu soubor upraven, aby obsahoval pouze potřebná data (resp. byl vytvořen nový soubor):
+\begin{lstlisting}[language=awk]
+awk -F \; '{print $11";"$13";"$14";"$15";"$17";"$18}' 20181231_OB_554782_ADR.csv > ruian_adr.csv
+\end{lstlisting}
+
+Ponechány byly sloupce ulice, číslo domovní, číslo orientační, číslo orientační znak (a, b..) a souřadnice x, y v S-JTSK. 
+
+Dále byla v databázi na geo102 vytvořena a naplněna tabulka \textit{adr} (včetně geometrie) pomocí dávkového souboru \textit{adr.sql} puštěného pomocí příkazu:
+
+\begin{lstlisting}[language=bash]
+psql -h geo102.fsv.cvut.cz -d pgis_uzpd -U uzpd18_a -f adr.sql	
+\end{lstlisting}
+
+Obsah dávkového souboru:
+
+\begin{lstlisting}[language=sql]
+CREATE TABLE adr(
+	gid serial NOT NULL,
+	ulice VARCHAR(50),
+	c_domovni INTEGER,
+	c_orientacni INTEGER,
+	co_znak VARCHAR(2),
+	y REAL,
+	x REAL,
+	geom geometry);
+	
+\copy adr(ulice, c_domovni, c_orientacni, co_znak, y, x) FROM '../ruian_adr.csv' DELIMITER ';' CSV HEADER encoding 'windows-1250';
+
+UPDATE adr SET geom = ST_GeomFromText('POINT(-'||y||' -'||x||')',5514);
+\end{lstlisting}
+
+Aby byly názvy ulic importovány správně s diakritikou, bylo třeba nastavit kódování na uvedenou hodnotu \texttt{windows-1250}.
+
+\subsection{Data PID}
+Data zastávek a tras linek PID byla stažena ve formátu \textit{shp}. Pro import dat do databáze byl využit nástroj PostGISu \textit{shp2pgsql}, jež konvertuje soubory ve formátu \textit{shp} do databázových tabulek. Toto bylo vykonáno pomocí příkazu (v shellu):
+
+\begin{lstlisting}[language=bash]
+shp2pgsql -s 5514 -D -I DOP_PID_TRASY_TS_L.shp | psql -h geo102.fsv.cvut.cz -d pgis_uzpd -U uzpd18_a
+\end{lstlisting} 
+ 
+A přímo v databázi byl změněn název vytvořené tabulky:
+
+\begin{lstlisting}[language=sql]
+ALTER TABLE dop_pid_trasy_ts_l RENAME TO trasy;
+\end{lstlisting} 
+
+Analogicky se postupovalo u zastávek:
+
+\begin{lstlisting}[language=bash]
+shp2pgsql -s 5514 -D -I DOP_PID_ZASTAVKY_TS_B.shp| psql -h geo102.fsv.cvut.cz -d pgis_uzpd -U uzpd18_a
+\end{lstlisting} 
+
+\begin{lstlisting}[language=sql]
+ALTER TABLE dop_pid_zastavky_ts_b RENAME TO zastavky;
+\end{lstlisting} 
+
+
+ 
+\section{Zdroje}
+\noindent
+[1] Nahlížení do KN, aplikace ČÚZK - \texttt{https://nahlizenidokn.cuzk.cz/} 
+
+\noindent
+[2] Portál pro Otevřená data hlavního města Prahy - \texttt{http://opendata.praha.eu/}
+
+\end{document}
+
+
+
+ 
