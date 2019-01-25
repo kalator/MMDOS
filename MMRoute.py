@@ -7,16 +7,22 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format="%(message)s"
 log = logging.getLogger()
 
 
+class MMDosError(BaseException):
+    def __init__(self, msg):
+        log.critical(msg)
+
+
 def run():
     cur = connect_database("geo102.fsv.cvut.cz", "pgis_uzpd", "uzpd18_a", "a_uzpd18")
     print_logo()
 
-    # user input
-    id_from, id_to = get_itinerary(cur)  # returns 2 arrays
+    compute = True
+    while compute:
+        get_route(cur)
+        print("\n")
+        compute = yes_no("Again? (Y/N)")
 
-    stops, lines = compute_route(id_from, id_to, cur)
-
-    write_output(stops, lines)
+    log.info("Exiting..")
 
 
 def connect_database(host, database, user, password):
@@ -33,7 +39,7 @@ def connect_database(host, database, user, password):
         cur = conn.cursor()
         return cur
     else:
-        raise ConnectionError('Database did not connect, terminating...')
+        raise MMDosError('Database did not connect, terminating...')
 
 
 def print_logo():
@@ -51,16 +57,31 @@ def print_logo():
 -------------------------------------------""")
 
 
+def get_route(cur):
+    # user input
+    try:
+        id_from, id_to, address_from, address_to = get_itinerary(cur)  # returns 2 arrays
+
+        stops, lines = compute_route(id_from, id_to, cur)
+
+        write_output(stops, lines, address_from, address_to)
+
+    except psycopg2.Error:
+        log.critical("Invalid input!")
+
+
 def get_itinerary(cur):
-    print("Start with typing from where you want to travel:")
+    print("\nStart with typing from where you want to travel:")
     street_from = input("Street: ")
     hn_from = input("House number: ")
     hon_from = input("House orientation number: ")
+    address_from = "{} {}/{}".format(street_from, hn_from, hon_from)
 
     print("\nWhere do you want to go?")
     street_to = input("Street: ")
     hn_to = input("House number: ")
     hon_to = input("House orientation number: ")
+    address_to = "{} {}/{}".format(street_to, hn_to, hon_to)
 
     id_from = []
     id_to = []
@@ -79,7 +100,7 @@ def get_itinerary(cur):
         id_to.append(it[0])
         it = cur.fetchone()
 
-    return id_from, id_to
+    return id_from, id_to, address_from, address_to
 
 
 def compute_route(id_from, id_to, cur):
@@ -146,13 +167,23 @@ def compute_route(id_from, id_to, cur):
     return all_stops, lns
 
 
-def write_output(stops, lines):
-    print("\nYour trasa:")
+def write_output(stops, lines, address_from, address_to):
+    print("\nYour route from {} to {}:".format(address_from, address_to))
     print("{:^30s}|{:^30s}".format("Stop", "Line"))
     print("--------------------------------------------------------------")
 
     for stop, line in zip(stops, lines):
         print("{:^30s}|{:^30s}".format(str(stop), str(line)))
+
+
+def yes_no(question):
+    answer = ""
+    while answer.lower() not in ("y", "n"):
+        answer = input(question + ": ")
+    if answer.lower() == "y":
+        return True
+    else:
+        return False
 
 
 if __name__ == '__main__':
