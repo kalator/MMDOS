@@ -54,20 +54,33 @@ SELECT * FROM FindVertexID(612, 79, 'Evropská');
 
 --SELECT * FROM FindStationName(6655);
 
-CREATE OR REPLACE FUNCTION FindVertexID2(cd INTEGER, u VARCHAR)
-RETURNS INTEGER AS $id2$
+CREATE OR REPLACE FUNCTION FindVertexIDcd(cd INTEGER, u VARCHAR)
+RETURNS INTEGER AS $id$
 declare 
-	id2 integer;
+	id integer;
 BEGIN 
-	SELECT v.id INTO id2 FROM adr a, trasy_vertices_pgr v 
+	SELECT v.id INTO id FROM adr a, trasy_vertices_pgr v 
 	WHERE a.c_domovni = cd 
 	AND a.ulice = u
 	ORDER BY (a.geom)<->(v.geom) asc limit 1;
-	RETURN id2;
+	RETURN id;
 END;
-$id2$ LANGUAGE plpgsql;
+$id$ LANGUAGE plpgsql;
 
-SELECT * FROM FindVertexID(646, 'Úhlová');
+--SELECT * FROM FindVertexID2(646, 'Úhlová');
+
+CREATE OR REPLACE FUNCTION FindVertexIDori(co INTEGER, u VARCHAR)
+RETURNS INTEGER AS $id$
+declare 
+	id integer;
+BEGIN 
+	SELECT v.id INTO id FROM adr a, trasy_vertices_pgr v 
+	WHERE a.c_orientacni = co
+	AND a.ulice = u
+	ORDER BY (a.geom)<->(v.geom) asc limit 1;
+	RETURN id;
+END;
+$id$ LANGUAGE plpgsql;
 
 
 
