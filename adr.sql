@@ -14,3 +14,5 @@ geom geometry
 
 UPDATE adr
 SET geom = ST_GeomFromText('POINT(-'||y||' -'||x||')',5514);
+
+DELETE FROM adr WHERE geom IS NULL;
