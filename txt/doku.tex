@@ -183,13 +183,13 @@ WHERE (l_metro_n IS NULL
 	OR l_bus_n IS NOT NULL
 	OR l_lan_n IS NOT NULL
 	OR l_vlak_n IS NOT NULL
-	OR l_lod_n IS NOT NULL)
-AND l_metro IS NULL
-AND l_tram IS NULL
-AND l_bus IS NULL
-AND l_lan IS NULL 
-AND l_vlak IS NULL 
-AND l_lod IS NULL;
+	OR l_lod_n IS NOT NULL
+	AND l_metro IS NULL
+	AND l_tram IS NULL
+	AND l_bus IS NULL
+	AND l_lan IS NULL 
+	AND l_vlak IS NULL 
+	AND l_lod IS NULL);
 \end{lstlisting} 
 
 Analogicky se postupovalo u zastávek:
@@ -204,11 +204,10 @@ ALTER TABLE dop_pid_zastavky_ts_b RENAME TO zastavky;
 
 U zastávek byly taktéž smazány řádky obsahující pouze údaje o nočních linkách:
 \begin{lstlisting}[language=sql]
-DELETE FROM zastavky 
-WHERE zast_denno = 2;
+DELETE FROM zastavky WHERE zast_denno = 2;
 \end{lstlisting} 
 
-Vzhledem k prapodivnosti sloupce \texttt{zast\_id}, kde se ukázalo, že více zastávek s různými názvy a různým umístěním mají ID stejné, se autoři rozhodli použít sloupec \texttt{zast\_uzel} jako identifikátor zastávky, protože byla hodnota stejná pro všechny položky se stejným názvem zastávky. Sloupec byl přetypován následujícím příkazem: 
+Vzhledem k prapodivnosti sloupce \texttt{zast\_id}, kde se ukázalo, že více zastávek s různými názvy a různým umístěním mají stejné ID, se autoři rozhodli použít sloupec \texttt{zast\_uzel} jako identifikátor zastávky, protože byla hodnota stejná pro všechny položky se stejným názvem zastávky. Sloupec bylo třeba přetypovat na typ \texttt{•}t{INTEGER} následujícím příkazem: 
 
 \begin{lstlisting}[language=sql]
 ALTER TABLE zastavky 
@@ -217,25 +216,66 @@ USING CAST(zast_uzel_ AS INTEGER);
 \end{lstlisting} 
 
 \section{Topologie}
-\indent Vzhledem ke komplikacím zmiňovaným v předchozí kapitole se autoři rozhodli si vytvořit topologii bez použití funkce \texttt{pgr\_createTopology}. Nejprve byly do tabulky \texttt{trasy} přidány sloupce \texttt{source} a \texttt{target} a vytvořen prostorový index: 
+\subsection{Hrany}
+Vzhledem ke komplikacím zmiňovaným v předchozí kapitole se autoři rozhodli vytvořit topologii bez použití funkce z extenze pgRouting k tomu určené -  \texttt{pgr\_createTopology}. Nejprve byly do tabulky \texttt{trasy} přidány sloupce \texttt{source} a \texttt{target} a vytvořen prostorový index: 
 \begin{lstlisting}[language=sql]
 ALTER TABLE trasy ADD COLUMN "source" integer;
 ALTER TABLE trasy ADD COLUMN "target" integer;
 CREATE INDEX ON trasy USING gist(geom);
 \end{lstlisting} 
 
-Následně byl vytvořen skript v Pythonu, který pomocí prostorového dotazu k začátku i konci každé linie v tabulce \texttt{trasy} vybral nejbližsí bod z tabulky \texttt{zastavky} a vrátil ID jeho uzlu, které pak bylo dosazeno do sloupce \texttt{source}, případně \texttt{target}. \\
-Prostorový dotaz pro počáteční bod: 
-\begin{lstlisting}[language=sql]
-SELECT DISTINCT ON(t.gid) t.gid, z.zast_uzel_ FROM trasy t, zastavky z WHERE ST_DWithin(ST_StartPoint(ST_LineMerge(t.geom)), z.geom, 500) AND t.zast_id_od = z.zast_id
+Následně byl vytvořen skript v Pythonu, který pomocí prostorového dotazu k začátku i konci každé linie v tabulce \texttt{trasy} vybral nejbližsí bod z tabulky \texttt{zastavky} a vrátil ID jeho uzlu, které pak bylo dosazeno do sloupce \texttt{source}, případně \texttt{target}. Vzhledem k tomu, že geometrickým typem linií v tabulce \texttt{trasy} byl \texttt{MultiLineString} a funkce \texttt{ST\_StartPoint()} resp. \texttt{ST\_EndPoint()} jako argument bere pouze typ \texttt{LineString}, bylo třeba mezi těmito typy provést konverzi.
+\newpage
+Celý skript:
+\begin{lstlisting}[language=python]
+import psycopg2
+
+
+# connect to database
+conn = psycopg2.connect(host="geo102.fsv.cvut.cz",
+						database="pgis_uzpd",
+						user="uzpd18_a",
+						password="a_uzpd18")
+
+cur = conn.cursor()
+cur_s = conn.cursor()
+cur_e = conn.cursor()
+
+# Select starting points
+cur_s.execute("SELECT DISTINCT ON(t.gid) t.gid, z.zast_uzel_ FROM trasy t, zastavky z WHERE ST_DWithin(ST_StartPoint(ST_LineMerge(t.geom)), z.geom, 500) AND t.zast_id_od = z.zast_id")
+
+# Select end points
+cur_e.execute("SELECT DISTINCT ON(t.gid) t.gid, z.zast_uzel_ FROM trasy t, zastavky z WHERE ST_DWithin(ST_EndPoint(ST_LineMerge(t.geom)), z.geom, 500) AND t.zast_id_ka = z.zast_id")
+
+sp = cur_s.fetchone()
+ep = cur_e.fetchone()
+i = 0
+
+# loop through starting and ending points, update source and target
+while sp is not None or ep is not None:
+	if sp is not None:
+		cur.execute("UPDATE trasy SET source = {} WHERE gid = {}".format(sp[1],sp[0]))
+	if ep is not None:
+		cur.execute("UPDATE trasy SET target = {} WHERE gid = {}".format(ep[1],ep[0]))
+	sp = cur_s.fetchone()
+	ep = cur_e.fetchone()		
+
+conn.commit()
+
+cur_s.close()
+cur_e.close()
+cur.close()
+
+if conn is not None:
+	conn.close()
 \end{lstlisting}
 
-A pro koncový bod: 
-\begin{lstlisting}[language=sql]
-SELECT DISTINCT ON(t.gid) t.gid, z.zast_uzel_ FROM trasy t, zastavky z WHERE ST_DWithin(ST_EndPoint(ST_LineMerge(t.geom)), z.geom, 500) AND t.zast_id_ka = z.zast_id")
-\end{lstlisting} 
+Počet řádků v tabulce trasy se pohybuje kolem 85 000, skript běžel několik desítek minut. 
 
-Následně byla vytvořena tabulka vertexů pomocí funkce \textit{pgr\_createVerticesTable} a sloupec \texttt{the\_geom} přejmenován na \texttt{geom}:
+\newpage
+
+\subsection{Uzly}
+Následně byla vytvořena tabulka uzlů pomocí funkce \textit{pgr\_createVerticesTable}. Sloupec \texttt{the\_geom} byl přejmenován na \texttt{geom}:
 \begin{lstlisting}[language=sql]
 SELECT pgr_createVerticesTable('trasy','geom','source','target');
 ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
