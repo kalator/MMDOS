@@ -300,7 +300,7 @@ V jazyce Python byl vytvořen skript (soubor \texttt{MMDOS.py}), který na vstup
 	\begin{itemize}
 		\item V tabulce \texttt{trasy} jsou pro každý úsek vyjmenovány všechny linky, které na daném úseku poskytují přepravu. Program prochází vytvořenou trasu a vybírá linky s nejmenším počtem přestupů následovně:
 			\begin{enumerate}
-				\item Průchod všech linek projíždějící první zastávkou (resp. úsekem mezi první a druhou zastávkou), výpočet dosahu každé linky (tedy až o kolik zastávek se lze posunout danou linkou).
+				\item Průchod všech linek projíždějících první zastávkou (resp. úsekem mezi první a druhou zastávkou), výpočet dosahu každé linky (tedy až o kolik zastávek se lze posunout danou linkou).
 				\item Přiřazení čísla linky s nejdelším dosahem (příp. první z linek, které mají shodný nejdelší dosah) k daným zastávkám.
 						\begin{itemize}
 							\item Vzhledem k přiřazování čísel linek k počátečním bodům  úseků, se číslo linky nepřiřadí k poslední zastávce, do které vybraná linka dosahuje. Toto je využito v dalším kroku.

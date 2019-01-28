@@ -68,31 +68,25 @@ AND t.zast_id_od = z.zast_id
 
 \end{frame}
 
-\begin{frame}
-\section{Topologie}
+\begin{frame}[fragile]
 \frametitle{Topologie - uzly}	
 
 \begin{itemize}
 	\item vytvoření tabulky uzlů pomocí funkce pgr\_createVerticesTable a přejmenování sloupce \texttt{the\_geom} na \texttt{geom}
 \end{itemize}
 
-\end{frame}
+\begin{exampleblock}{}
+\begin{lstlisting}[language=sql]
+SELECT pgr_createVerticesTable('trasy','geom','source','target');
+ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
+\end{lstlisting}
+\end{exampleblock}
 
-\begin{frame}
-\section{Konzolová aplikace}
-\frametitle{Konzolová aplikace}
-\begin{block}{}
-\indent \textit{MMDOS.py}
-\end{block}
-\begin{itemize}
-	\item zjištění ID nejbližších zastávek - SQL funkce
-	\item výpočet nejkratší trasy
-	\item výpis zastávek a linek s co nejmenším počtem přestupů
-\end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Konzolová aplikace - funkce}
+\section{Konzolová aplikace}
+\frametitle{Konzolová aplikace - pomocné SQL funkce}
 \begin{exampleblock}{}
 \begin{lstlisting}[language=sql]
 FindStationName(id INTEGER)
@@ -102,6 +96,31 @@ FindVertexIDori(co INTEGER, u VARCHAR)
 FindVertexIDst(u VARCHAR)
 \end{lstlisting}
 \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Konzolová aplikace - výpočet nejkratší trasy}
+\begin{exampleblock}{}
+\begin{lstlisting}[language=sql]
+SELECT z.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, trasy.l_vlak, trasy.l_lod, node
+FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', id_from, id_to) 
+JOIN (SELECT DISTINCT(zastavky.zast_uzel_), zastavky.zast_nazev FROM zastavky) AS z ON node = z.zast_uzel_ L
+EFT JOIN trasy ON edge = trasy.gid ORDER BY seq;"
+\end{lstlisting}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Konzolová aplikace - výpis zastávek}
+\begin{itemize}
+	\item \texttt{trasy} - v každém úseku údaje o všech linkách, které tudy vedou
+	\item průchod nejkratší trasou a výběr linek s nejmenším počtem přestupů: 
+	\begin{enumerate}
+		\item průchod všech linek projíždějících první zastávkou, výpočet dosahu každé linky
+	\item přiřazení čísla linky s nejdelším dosahem
+	\item zpakování kroků 1 a 2
+	\end{enumerate}
+\end{itemize}
 \end{frame}
 
 \begin{frame}
