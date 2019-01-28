@@ -135,7 +135,7 @@ awk -F \; '{print $11";"$13";"$14";"$15";"$17";"$18}' 20181231_OB_554782_ADR.csv
 
 Ponechány byly sloupce ulice, číslo domovní, číslo orientační, číslo orientační znak (a, b..) a souřadnice x, y v S-JTSK. 
 
-Dále byla v databázi na geo102 vytvořena a naplněna tabulka \textit{adr} (včetně geometrie) pomocí dávkového souboru \textit{adr.sql} puštěného pomocí příkazu:
+Dále byla v databázi na geo102 vytvořena a naplněna tabulka \texttt{adr} (včetně geometrie) pomocí dávkového souboru \texttt{adr.sql} puštěného pomocí příkazu:
 
 \begin{lstlisting}[language=bash]
 psql -h geo102.fsv.cvut.cz -d pgis_uzpd -U uzpd18_a -f adr.sql	
@@ -165,7 +165,7 @@ DELETE FROM adr WHERE geom IS NULL;
 Aby byly názvy ulic importovány správně s diakritikou, bylo třeba nastavit kódování na uvedenou hodnotu \texttt{windows-1250}. Zároveň byla pro potřeby projektu z dat vymazána adresní místa bez geometrie.
 
 \subsection{Data PID}
-Data zastávek a tras linek PID byla stažena ve formátu \textit{shp}. Pro import dat do databáze byl využit nástroj PostGISu \textit{shp2pgsql}, jež konvertuje soubory ve formátu \textit{shp} do databázových tabulek. Toto bylo vykonáno pomocí příkazu (v shellu):
+Data zastávek a tras linek PID byla stažena ve formátu \texttt{shp}. Pro import dat do databáze byl využit nástroj PostGISu \texttt{shp2pgsql}, jež konvertuje soubory ve formátu \texttt{shp} do databázových tabulek. Toto bylo vykonáno pomocí příkazu (v shellu):
 
 \begin{lstlisting}[language=bash]
 shp2pgsql -s 5514 -D -I DOP_PID_TRASY_TS_L.shp | psql -h geo102.fsv.cvut.cz -d pgis_uzpd -U uzpd18_a
@@ -177,7 +177,7 @@ A přímo v databázi byl změněn název vytvořené tabulky:
 ALTER TABLE dop_pid_trasy_ts_l RENAME TO trasy;
 \end{lstlisting} 
 
-Pro potřeby našeho projektu nebyly nutné údaje o nočních linkách, proto byly tyto řádky smazány: 
+Pro potřeby našeho projektu nebyly nutné údaje o nočních linkách, proto byly tyto řádky smazány (soubor \texttt{mazani\_nocnich.sql}): 
 \begin{lstlisting}[language=sql]
 DELETE FROM trasy 
 WHERE (l_metro_n IS NULL
@@ -219,7 +219,7 @@ USING CAST(zast_uzel_ AS INTEGER);
 
 \section{Topologie}
 \subsection{Hrany}
-Vzhledem ke komplikacím zmiňovaným v předchozí kapitole se autoři rozhodli vytvořit topologii bez použití funkce z extenze pgRouting k tomu určené -  \texttt{pgr\_createTopology}. Nejprve byly do tabulky \texttt{trasy} přidány sloupce \texttt{source} a \texttt{target} a vytvořen prostorový index: 
+Vzhledem ke komplikacím zmiňovaným v předchozí kapitole se autoři rozhodli vytvořit topologii bez použití funkce z extenze pgRouting k tomu určené -  \texttt{pgr\_createTopology}. Nejprve byly do tabulky \texttt{trasy} přidány sloupce \texttt{source} a \texttt{target} a vytvořen prostorový index (soubor \texttt{topo.sql}): 
 \begin{lstlisting}[language=sql]
 ALTER TABLE trasy ADD COLUMN "source" integer;
 ALTER TABLE trasy ADD COLUMN "target" integer;
@@ -228,7 +228,7 @@ CREATE INDEX ON trasy USING gist(geom);
 
 Následně byl vytvořen skript v Pythonu, který pomocí prostorového dotazu k začátku i konci každé linie v tabulce \texttt{trasy} vybral nejbližsí bod z tabulky \texttt{zastavky} a vrátil ID jeho uzlu, které pak bylo dosazeno do sloupce \texttt{source}, případně \texttt{target}. Vzhledem k tomu, že geometrickým typem linií v tabulce \texttt{trasy} byl \texttt{MultiLineString} a funkce \texttt{ST\_StartPoint()} resp. \texttt{ST\_EndPoint()} jako argument bere pouze typ \texttt{LineString}, bylo třeba mezi těmito typy provést konverzi.
 \newpage
-Celý skript:
+Celý skript (soubor \textit{MMTopology.py}):
 \begin{lstlisting}[language=python]
 import psycopg2
 
@@ -277,7 +277,7 @@ Počet řádků v tabulce trasy se pohybuje kolem 85 000, skript běžel několi
 \newpage
 
 \subsection{Uzly}
-Následně byla vytvořena tabulka uzlů pomocí funkce \textit{pgr\_createVerticesTable}. Sloupec \texttt{the\_geom} byl přejmenován na \texttt{geom}:
+Následně byla vytvořena tabulka uzlů pomocí funkce \textit{pgr\_createVerticesTable}. Sloupec \texttt{the\_geom} byl přejmenován na \texttt{geom} (soubor \texttt{uzly.sql}):
 \begin{lstlisting}[language=sql]
 SELECT pgr_createVerticesTable('trasy','geom','source','target');
 ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
@@ -285,7 +285,7 @@ ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
 
 \section{Konzolová aplikace}
 \subsection{Popis výpočtu}
-V jazyce Python byl vytvořen skript, který na vstup uživatele provádí síťovou analýzu za využití Dijkstrovo algoritmu implementovaného v pgRouting jako funkce \texttt{pgr\_dijkstra}. Postup výpočtu je následující:
+V jazyce Python byl vytvořen skript (soubor \texttt{MMDOS.py}), který na vstup uživatele provádí síťovou analýzu za využití Dijkstrovo algoritmu implementovaného v pgRouting jako funkce \texttt{pgr\_dijkstra}. Postup výpočtu je následující:
 \begin{enumerate}
 \item Zjištění ID nejbližších zastávek od zadaných adres, aplikace umožňuje uživateli zadat následující kombinace údajů o adresách:
 	\begin{itemize}
@@ -311,7 +311,7 @@ V jazyce Python byl vytvořen skript, který na vstup uživatele provádí síť
 \end{enumerate} 
 
 \subsection{Vytvořené SQL funkce}
-Pro potřeby konzolové aplikace byly vytvořeny následující SQL funkce:
+Pro potřeby konzolové aplikace byly vytvořeny následující SQL funkce (soubor \texttt{funkce.sql}):
 
 \begin{itemize}
 \item Funkce pro zjištění názvu zastávky podle zadaného ID.
@@ -403,7 +403,7 @@ kde \texttt{id\_from, id\_to} jsou ID počáteční a koncové zastávky. \\
 K tabulce výsledků z výpočtu funkcí \texttt{pgr\_dijkstra} byla přes sloupec \texttt{zast\_uzel\_} připojena tabulka \texttt{zastavky}, ze které byl vypsán název zastávky. Připojena byla též tabulka \texttt{trasy} pro zobrazení linek, které daným místem projíždějí. Protože poslední uzel nemá žádnou navazující hranu, ale musí být také vypsán, byl použit \texttt{LEFT JOIN}, který zachovává všechny údaje z původní tabulky. Nakonec byl výstup seřazen podle atributu \texttt{seq}, jež udává pořadí zastávek v nalezené trase.
 \newpage
 \subsection{Ukázka aplikace}
-
+Aplikace lze spustit spuštěním skriptu \texttt{MMDOS.py} případně v OS Linux pomocí stand-alone spustitelného souboru \texttt{MMDOS} (v přílohách).
 \begin{figure}[h!]
  \centering
  \includegraphics[scale=0.5]{ukazka.png}
@@ -426,6 +426,16 @@ Dalším problémem byla přítomnost záznamů linek s nočními spoji. To způ
 
 \newpage
 \section{Přílohy}
+\begin{itemize}
+	\item Import adres do databáze - \texttt{adr.sql}
+	\item Mazání údajů o nočních linkách - \texttt{mazani\_nocnich.sql}
+	\item Topologie tras (přidání sloupců) - \texttt{topo.sql}
+	\item Skript pro topologii tras - \texttt{MMTopology.py}
+	\item Vytvoření tabulky s uzly - \texttt{uzly.sql}
+	\item Skript MMDOS - \texttt{MMDOS.py}
+	\item Vytvořené SQL funkce - \texttt{funkce.sql}
+	\item Stand-alone aplikace - \texttt{MMDOS}
+\end{itemize}
 
 
 \newpage
