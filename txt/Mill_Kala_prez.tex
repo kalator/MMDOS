@@ -8,7 +8,7 @@
 
 \usetheme{Boadilla}
 \title{MMDOS \\ Síťové analýzy PID}
-\author{Michael Kala a Petra Millarová}
+\author{Michael Kala a Petra Mariana Millarová}
 \date{únor 2019}
 
 \begin{document}
@@ -34,9 +34,18 @@
 \section{Data}
 \frametitle{Zdroje dat}
 \begin{itemize}
-	\item Adresní místa RÚIAN Hlavního města Prahy - nahlížení do KN - formát *.csv
-	\item Trasy linek PID - portál opendata Hlavního města Prahy - formát *.shp
-	\item Zastávky PID - portál opendata Hlavního města Prahy - formát *.shp
+	\item Adresní místa RÚIAN Hlavního města Prahy - nahlížení do KN
+		\begin{itemize}
+				\item formát *.csv
+		\end{itemize}		 
+	\item Trasy linek PID - portál opendata Hlavního města Prahy
+		\begin{itemize}
+			\item formát *.shp
+		\end{itemize}
+	\item Zastávky PID - portál opendata Hlavního města Prahy
+		\begin{itemize}
+			\item formát *.shp
+		\end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -58,7 +67,7 @@
 	\item přiřazení správných zast\_uzel do sloupců source a target pomocí skriptu
 \end{itemize}
 \begin{exampleblock}{}
-\begin{lstlisting}[language=sql]
+\begin{lstlisting}[columns=flexible, basicstyle=\footnotesize, language=sql]
 SELECT DISTINCT ON(t.gid) t.gid, z.zast_uzel_ 
 FROM trasy t, zastavky z 
 WHERE ST_DWithin(ST_StartPoint(ST_LineMerge(t.geom)), z.geom, 500) 
@@ -76,9 +85,9 @@ AND t.zast_id_od = z.zast_id
 \end{itemize}
 
 \begin{exampleblock}{}
-\begin{lstlisting}[language=sql]
+\begin{lstlisting}[columns=flexible, basicstyle=\footnotesize, language=sql]
 SELECT pgr_createVerticesTable('trasy','geom','source','target');
-ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
+ALTER TABLE trasy_vertices_pgr RENAME COLUMN the_geom TO geom;
 \end{lstlisting}
 \end{exampleblock}
 
@@ -88,7 +97,7 @@ ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
 \section{Konzolová aplikace}
 \frametitle{Konzolová aplikace - pomocné SQL funkce}
 \begin{exampleblock}{}
-\begin{lstlisting}[language=sql]
+\begin{lstlisting}[columns=flexible, basicstyle=\footnotesize, language=sql]
 FindStationName(id INTEGER)
 FindVertexID(cd INTEGER, co INTEGER, u VARCHAR)
 FindVertexIDcd(cd INTEGER, u VARCHAR)
@@ -99,13 +108,49 @@ FindVertexIDst(u VARCHAR)
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Konzolová aplikace - výpočet nejkratší trasy}
+\frametitle{Konzolová aplikace - ukázka funkce}
+\begin{itemize}
+	\item Nalezení nejbližšího uzlu k zadané adrese
+\end{itemize}
 \begin{exampleblock}{}
-\begin{lstlisting}[language=sql]
-SELECT z.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, trasy.l_vlak, trasy.l_lod, node
-FROM pgr_dijkstra('SELECT gid as id, source, target, CAST(shape_leng as REAL) as cost FROM trasy', id_from, id_to) 
-JOIN (SELECT DISTINCT(zastavky.zast_uzel_), zastavky.zast_nazev FROM zastavky) AS z ON node = z.zast_uzel_ L
-EFT JOIN trasy ON edge = trasy.gid ORDER BY seq;"
+\begin{lstlisting}[columns=flexible, basicstyle=\footnotesize, language=sql]
+CREATE OR REPLACE FUNCTION 
+	FindVertexID(cd INTEGER, co INTEGER, u VARCHAR)
+RETURNS INTEGER AS $id$
+declare 
+	id INTEGER;
+BEGIN 
+	SELECT v.id INTO id FROM adr a, trasy_vertices_pgr v 
+	WHERE a.c_domovni = cd 
+	AND a.c_orientacni = co 
+	AND a.ulice = u
+	ORDER BY (a.geom)<->(v.geom) ASC LIMIT 1;
+	RETURN id;
+END;
+$id$ LANGUAGE plpgsql;
+\end{lstlisting}
+\end{exampleblock}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{Konzolová aplikace - výpočet nejkratší trasy}
+\begin{itemize}
+	\item Dijkstrův algoritmus
+\end{itemize}
+\begin{exampleblock}{}
+\begin{lstlisting}[showstringspaces=false, columns=flexible, basicstyle=\footnotesize, language=sql]
+SELECT z.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, 
+	trasy.l_vlak, trasy.l_lod, node
+FROM pgr_dijkstra(
+	'SELECT gid as id, source, target, CAST(shape_leng as REAL) AS cost 
+	FROM trasy', id_from, id_to) 
+JOIN (
+	SELECT DISTINCT(zastavky.zast_uzel_), zastavky.zast_nazev 
+	FROM zastavky
+	) AS z ON node = z.zast_uzel_ 
+LEFT JOIN trasy ON edge = trasy.gid 
+ORDER BY seq;
 \end{lstlisting}
 \end{exampleblock}
 \end{frame}
@@ -118,7 +163,7 @@ EFT JOIN trasy ON edge = trasy.gid ORDER BY seq;"
 	\begin{enumerate}
 		\item průchod všech linek projíždějících první zastávkou, výpočet dosahu každé linky
 	\item přiřazení čísla linky s nejdelším dosahem
-	\item zpakování kroků 1 a 2
+	\item zopakování kroků 1 a 2
 	\end{enumerate}
 \end{itemize}
 \end{frame}

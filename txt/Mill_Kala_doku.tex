@@ -99,7 +99,7 @@
 \vspace{11cm}
 
 \large
-Únor 2019 \hspace{5cm} Petra M. Millarová, Michael Kala\\
+Únor 2019 \hspace{5cm} Petra Mariana Millarová, Michael Kala\\
 
 \end{center}
 
@@ -328,7 +328,7 @@ END;
 $name$ LANGUAGE plpgsql;
 \end{lstlisting} 
 
-\item Set funkcí pro zjištění ID zastávky, která je nejblíže zadané adrese. První tři funkce jsou uzpůsobeny na zadání názvu ulice a kombinace čísla orientačního, popisného a nebo obou. Poslední z funkcí umožňuje uživateli zadat jen název ulice, přičemž funkce vrací i adresu, ke které bylo hledání nejbližší zastávky vztaženo. U prvních dvou funkcí není třeba vracet celou adresu, jelikož čísla popisná a orientační jsou dle zákona unikátní v rámci ulice (popisné v rámci části obce).
+\item Set funkcí pro zjištění ID uzlu zastávky, která je nejblíže zadané adrese. První tři funkce jsou uzpůsobeny na zadání názvu ulice a kombinace čísla orientačního, popisného a nebo obou. Poslední z funkcí umožňuje uživateli zadat jen název ulice, přičemž funkce vrací i adresu, ke které bylo hledání nejbližší zastávky vztaženo. U prvních dvou funkcí není třeba vracet celou adresu, jelikož čísla popisná a orientační jsou dle zákona unikátní v rámci ulice (popisné v rámci části obce).
 
 \begin{lstlisting}[language=sql]
 CREATE OR REPLACE FUNCTION FindVertexID(cd INTEGER, co INTEGER, u VARCHAR)
