@@ -17,6 +17,9 @@
 \usepackage{amssymb}
 \usepackage{hyperref}
 
+\def\UrlBreaks{\do\/\do-\do.\do=\do_\do?\do\&\do\%\do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J\do\K\do\L\do\M\do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V\do\W\do\X\do\Y\do\Z\do\0\do\1\do\2\do\3\do\4\do\5\do\6\do\7\do\8\do\9}
+
+
 \usepackage{listings}
 \usepackage{color}
  
@@ -69,7 +72,6 @@
 
 \setlength\parindent{0pt}
 
-
 \begin{document}
 
 
@@ -118,9 +120,9 @@ Cílem semestrálního projektu bylo vytvoření konzolové aplikace MMDOS, jež
 \newpage
 \section{Data}
 \begin{itemize}
-	\item Adresní místa RÚIAN Hlavního města Prahy, staženo z Nahlížení do KN [1] (dokumentace: \url{http://vdp.cuzk.cz/vymenny_format/csv/ad-csv-struktura.pdf})
-	\item Síť tras linek Pražské integrované dopravy, staženo z portálu Opendata Hlavního města Prahy [2] (dokumentace: \url{http://www.geoportalpraha.cz/cs/fulltext_geoportal?id=6F576389-385E-4E38-831A-8DE6EFB52C3A#.XErv8stKiV4})
-	\item Zastávky PID - jednotlivé označníky, staženo z portálu Opendata Hlavního města Prahy [2] (dokumentace: \url{http://www.geoportalpraha.cz/cs/fulltext_geoportal?id=63EF19FE-C2FB-4FC2-8C2D-EEBB72C6B81A#.XErxJ8tKiV4})
+	\item Adresní místa RÚIAN Hlavního města Prahy, staženo z Nahlížení do KN (dokumentace: \url{http://vdp.cuzk.cz/vymenny_format/csv/ad-csv-struktura.pdf})
+	\item Síť tras linek Pražské integrované dopravy, staženo z portálu Opendata Hlavního města Prahy (dokumentace: \url{http://www.geoportalpraha.cz/cs/fulltext_geoportal?id=6F576389-385E-4E38-831A-8DE6EFB52C3A#.XErv8stKiV4})
+	\item Zastávky PID - jednotlivé označníky, staženo z portálu Opendata Hlavního města Prahy (dokumentace: \url{http://www.geoportalpraha.cz/cs/fulltext_geoportal?id=63EF19FE-C2FB-4FC2-8C2D-EEBB72C6B81A#.XErxJ8tKiV4})
 \end{itemize}
 
 \newpage
@@ -207,7 +209,7 @@ U zastávek byly taktéž smazány řádky obsahující pouze údaje o nočních
 DELETE FROM zastavky WHERE zast_denno = 2;
 \end{lstlisting} 
 
-Vzhledem k prapodivnosti sloupce \texttt{zast\_id}, kde se ukázalo, že více zastávek s různými názvy a různým umístěním mají stejné ID, se autoři rozhodli použít sloupec \texttt{zast\_uzel} jako identifikátor zastávky, protože byla hodnota stejná pro všechny položky se stejným názvem zastávky. Sloupec bylo třeba přetypovat na typ \texttt{•}t{INTEGER} následujícím příkazem: 
+Vzhledem k prapodivnosti sloupce \texttt{zast\_id}, kde se ukázalo, že více zastávek s různými názvy a různým umístěním mají stejné ID, se autoři rozhodli použít sloupec \texttt{zast\_uzel} jako identifikátor zastávky, protože byla hodnota stejná pro všechny položky se stejným názvem zastávky. Sloupec bylo třeba přetypovat na typ \texttt{INTEGER} následujícím příkazem: 
 
 \begin{lstlisting}[language=sql]
 ALTER TABLE zastavky 
@@ -282,7 +284,37 @@ ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
 \end{lstlisting} 
 
 \section{Konzolová aplikace}
-Pro potřeby konzolové aplikace byly vytvořeny následující SQL funkce: 
+\subsection{Popis výpočtu}
+V jazyce Python byl vytvořen skript, který na vstup uživatele provádí síťovou analýzu za využití Dijkstrovo algoritmu implementovaného v pgRouting jako funkce \texttt{pgr\_dijkstra}. Postup výpočtu je následující:
+\begin{enumerate}
+\item Zjištění ID nejbližších zastávek od zadaných adres, aplikace umožňuje uživateli zadat následující kombinace údajů o adresách:
+	\begin{itemize}
+		\item ulice, č.p./č.o.
+		\item ulice, č.p.
+		\item ulice, č.o.
+		\item ulice
+	\end{itemize}
+	kdy na základě zadaných údajů je vyhledána adresa jim vyhovující, případně první z adres jim vyhovující.
+\item Výpočet nejkratší cesty pomocí Dijskrovo algoritmu.
+\item Výpis zastávek a linek respektující nejmenší počet přestupů.
+	\begin{itemize}
+		\item V tabulce \texttt{trasy} jsou pro každý úsek vyjmenovány všechny linky, které na daném úseku poskytují přepravu. Program prochází vytvořenou trasu a vybírá linky s nejmenším počtem přestupů následovně:
+			\begin{enumerate}
+				\item Průchod všech linek projíždějící první zastávkou (resp. úsekem mezi první a druhou zastávkou), výpočet dosahu každé linky (tedy až o kolik zastávek se lze posunout danou linkou).
+				\item Přiřazení čísla linky s nejdelším dosahem (příp. první z linek, které mají shodný nejdelší dosah) k daným zastávkám.
+						\begin{itemize}
+							\item Vzhledem k přiřazování čísel linek k počátečním bodům  úseků, se číslo linky nepřiřadí k poslední zastávce, do které vybraná linka dosahuje. Toto je využito v dalším kroku.
+						\end{itemize}
+				\item Opakování kroku (a) a (b) od první zastávky s nepřiřazeným číslem linky.
+			\end{enumerate}
+	\end{itemize}
+\end{enumerate} 
+
+\subsection{Vytvořené SQL funkce}
+Pro potřeby konzolové aplikace byly vytvořeny následující SQL funkce:
+
+\begin{itemize}
+\item Funkce pro zjištění názvu zastávky podle zadaného ID.
 \begin{lstlisting}[language=sql]
 CREATE OR REPLACE FUNCTION FindStationName(id INTEGER)
 RETURNS VARCHAR AS $name$
@@ -295,7 +327,8 @@ BEGIN
 END;
 $name$ LANGUAGE plpgsql;
 \end{lstlisting} 
-Tato funkce vrací název zastávky podle zadaného ID ze \texttt{zast\_uzel\_}.
+
+\item Set funkcí pro zjištění ID zastávky, která je nejblíže zadané adrese. První tři funkce jsou uzpůsobeny na zadání názvu ulice a kombinace čísla orientačního, popisného a nebo obou. Poslední z funkcí umožňuje uživateli zadat jen název ulice, přičemž funkce vrací i adresu, ke které bylo hledání nejbližší zastávky vztaženo. U prvních dvou funkcí není třeba vracet celou adresu, jelikož čísla popisná a orientační jsou dle zákona unikátní v rámci ulice (popisné v rámci části obce).
 
 \begin{lstlisting}[language=sql]
 CREATE OR REPLACE FUNCTION FindVertexID(cd INTEGER, co INTEGER, u VARCHAR)
@@ -353,30 +386,66 @@ BEGIN
 $$
 LANGUAGE plpgsql;
 \end{lstlisting} 
-Tyto funkce vrací ID zastávky ( \texttt{zast\_uzel\_} prostřednictvím vertexové tabulky), která je nejblíže zadanému adresnímu bodu. První tři funkce jsou uzpůsobeny na zadání kombinace čísla orientačního, domovního, nebo obou a názvu ulice a poslední funkce umožňuje uživateli zadat jen název ulice, přičemž funkce vrací i adresní bod, ke kterému bylo hledání nejbližší zastávky vztaženo. \\
+\end{itemize} 
 
-Následně byl napsán samotný skript aplikace.
+\subsection{Dijskrův algoritmus}
+Pro výpis nejkratší cesty byl použit následující příkaz:
+\begin{lstlisting}[language=SQL]
+SELECT z.zast_nazev, trasy.l_metro, trasy.l_tram, trasy.l_bus, trasy.l_lan, trasy.l_vlak, trasy.l_lod, node
+FROM pgr_dijkstra('SELECT gid AS id, source, target, CAST(shape_leng AS REAL) AS cost FROM trasy', id_from, id_to)
+JOIN (
+	SELECT DISTINCT(zastavky.zast_uzel_), zastavky.zast_nazev FROM zastavky
+	) AS z ON node = z.zast_uzel_
+LEFT JOIN trasy ON edge = trasy.gid 
+ORDER BY seq;
+\end{lstlisting}
+kde \texttt{id\_from, id\_to} jsou ID počáteční a koncové zastávky. \\
+K tabulce výsledků z výpočtu funkcí \texttt{pgr\_dijkstra} byla přes sloupec \texttt{zast\_uzel\_} připojena tabulka \texttt{zastavky}, ze které byl vypsán název zastávky. Připojena byla též tabulka \texttt{trasy} pro zobrazení linek, které daným místem projíždějí. Protože poslední uzel nemá žádnou navazující hranu, ale musí být také vypsán, byl použit \texttt{LEFT JOIN}, který zachovává všechny údaje z původní tabulky. Nakonec byl výstup seřazen podle atributu \texttt{seq}, jež udává pořadí zastávek v nalezené trase.
+\newpage
+\subsection{Ukázka aplikace}
 
+\begin{figure}[h!]
+ \centering
+ \includegraphics[scale=0.5]{ukazka.png}
+\end{figure}
+
+
+\newpage
 \section{Závěr}
-\indent Vytvořili jsme konzolovou aplikaci pro hledání spojů PID, do které lze zadat adresu či její část a aplikace vrací nejkratší trasu včetně linek a přestupů. Námětem na vylepšení je například odlišné ocenění tras metra, tramvají a autobusů, přidání možnosti cestovat v noci, přidání jízdních řádu atp. \\
-\indent Aplikace samozřejmě nemůže nahradit veřejné služby jako je iDoS nebo  vyhledávač spojení od Dopravního podniku hlavního města Prahy, do kterých bylo vloženo o mnoho více času a úsilí. 
+\subsection{Zhodnocení}
+Byla vytvořena konzolová aplikace pro vyhledávání spojů PID v závislosti na zadané adrese počátečního a cílového místa. Aplikace respektuje nejmenší počet přestupů. \\
+Při zpracování dat se vyskytlo několik problémů, zejména u dat poskytovaných na serveru Opendata, kde docházelo k případům, že několik zastávek mělo stejné "unikátní ID", přestože se nejmenovaly stejně a ani se nenacházely na stejném dopravním uzlu. Stejná ID byla použita v datové sadě s linkami PID u ID počátečních a koncových bodů jednotlivých úseků linek. Toto vyústilo v problém, kdy docházelo k chybnému přiřazení zastávek k příslušným úsekům linek. Tento problém byl vyřešen pomocí prostorového dotazování na nejbližší zastávky k daným bodům. \\
+Dalším problémem byla přítomnost záznamů linek s nočními spoji. To způsobovalo chybné vyhledávání nejkratších tras. Toto bylo vyřešeno vymazáním těchto údajů z tabulky.
 
+\subsection{Náměty na vylepšení}
+\begin{itemize}
+	\item Ocenění tras jiné než délky
+	\item Přidání možnosti nočního cestování
+	\item Přidání jízdních řádů
+\end{itemize}
+
+\newpage
+\section{Přílohy}
+
+
+\newpage
 \section{Zdroje}
-\noindent
-[1] Nahlížení do KN, aplikace ČÚZK - \texttt{https://nahlizenidokn.cuzk.cz/} 
 
-\noindent
-[2] Portál pro Otevřená data hlavního města Prahy - \texttt{http://opendata.praha.eu/}
+\begin{itemize}
+\item Nahlížení do KN, aplikace ČÚZK - \url{https://nahlizenidokn.cuzk.cz/} 
 
-\noindent
-[3] Tvoření topologie pomocí PGRouting - \texttt{http://docs.pgrouting.org/latest/en/pgr\_createTopology.html}
+\item Portál pro Otevřená data hlavního města Prahy - \url{http://opendata.praha.eu/}
 
-\noindent
-[4] Tvorba nové tabulky vertexů - \texttt{http://docs.pgrouting.org/latest/en/pgr\_createVerticesTable.html}
+\item Upload csv tabulky do databáze - \url{http://www.postgresqltutorial.com/import-csv-file-into-posgresql-table/}
 
-\noindent 
-[5] Funkce pro vyhledání nejkratší trasy - \texttt{http://docs.pgrouting.org/latest/en/pgr\_dijkstra.html}
- 
+\item Tvorba topologie pomocí pgRouting - \url{http://docs.pgrouting.org/latest/en/pgr\_createTopology.html}
+
+\item Tvorba nové tabulky uzlů - \url{http://docs.pgrouting.org/latest/en/pgr\_createVerticesTable.html}
+
+\item Funkce pro vyhledání nejkratší trasy - \url{http://docs.pgrouting.org/latest/en/pgr\_dijkstra.html}
+
+\end{itemize}
+
 \end{document}
 
 
