@@ -99,7 +99,7 @@
 \vspace{11cm}
 
 \large
-Únor 2019 \hspace{5cm} Petra Mariana Millarová, Michael Kala\\
+Únor 2019 \hspace{5cm} Petra M. Millarová, Michael Kala\\
 
 \end{center}
 
@@ -285,7 +285,7 @@ ALTER TABLE trasy_vertices_pgr rename column the_geom to geom;
 
 \section{Konzolová aplikace}
 \subsection{Popis výpočtu}
-V jazyce Python byl vytvořen skript (soubor \texttt{MMDOS.py}), který na vstup uživatele provádí síťovou analýzu za využití Dijkstrovo algoritmu implementovaného v pgRouting jako funkce \texttt{pgr\_dijkstra}. Postup výpočtu je následující:
+V jazyce Python byl vytvořen skript (soubor \texttt{MMDOS.py}), který na vstup uživatele provádí síťovou analýzu za využití Dijkstrova algoritmu implementovaného v pgRouting jako funkce \texttt{pgr\_dijkstra}. Postup výpočtu je následující:
 \begin{enumerate}
 \item Zjištění ID nejbližších zastávek od zadaných adres, aplikace umožňuje uživateli zadat následující kombinace údajů o adresách:
 	\begin{itemize}
@@ -295,7 +295,7 @@ V jazyce Python byl vytvořen skript (soubor \texttt{MMDOS.py}), který na vstup
 		\item ulice
 	\end{itemize}
 	kdy na základě zadaných údajů je vyhledána adresa jim vyhovující, případně první z adres jim vyhovující.
-\item Výpočet nejkratší cesty pomocí Dijskrovo algoritmu.
+\item Výpočet nejkratší cesty pomocí Dijstrova algoritmu.
 \item Výpis zastávek a linek respektující nejmenší počet přestupů.
 	\begin{itemize}
 		\item V tabulce \texttt{trasy} jsou pro každý úsek vyjmenovány všechny linky, které na daném úseku poskytují přepravu. Program prochází vytvořenou trasu a vybírá linky s nejmenším počtem přestupů následovně:
@@ -415,11 +415,11 @@ Aplikace lze spustit spuštěním skriptu \texttt{MMDOS.py} případně v OS Lin
 \subsection{Zhodnocení}
 Byla vytvořena konzolová aplikace pro vyhledávání spojů PID v závislosti na zadané adrese počátečního a cílového místa. Aplikace respektuje nejmenší počet přestupů. \\
 Při zpracování dat se vyskytlo několik problémů, zejména u dat poskytovaných na serveru Opendata, kde docházelo k případům, že několik zastávek mělo stejné "unikátní ID", přestože se nejmenovaly stejně a ani se nenacházely na stejném dopravním uzlu. Stejná ID byla použita v datové sadě s linkami PID u ID počátečních a koncových bodů jednotlivých úseků linek. Toto vyústilo v problém, kdy docházelo k chybnému přiřazení zastávek k příslušným úsekům linek. Tento problém byl vyřešen pomocí prostorového dotazování na nejbližší zastávky k daným bodům. \\
-Dalším problémem byla přítomnost záznamů linek s nočními spoji. To způsobovalo chybné vyhledávání nejkratších tras. Toto bylo vyřešeno vymazáním těchto údajů z tabulky.
+Dalším problémem byla přítomnost záznamů linek s nočními spoji. To způsobovalo chybné vyhledávání nejkratších tras. Toto bylo vyřešeno vymazáním těchto údajů z tabulky. \\
 
 \subsection{Náměty na vylepšení}
 \begin{itemize}
-	\item Ocenění tras jiné než délky
+	\item Ocenění tras např. podle typu dopravy - současný model hledá nejkratší trasu bez ohledu na přestupy
 	\item Přidání možnosti nočního cestování
 	\item Přidání jízdních řádů
 \end{itemize}
