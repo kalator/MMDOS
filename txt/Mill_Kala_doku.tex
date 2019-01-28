@@ -99,7 +99,7 @@
 \vspace{11cm}
 
 \large
-Únor 2019 \hspace{5cm} Petra Mariana Millarová, Michael Kala\\
+Únor 2019 \hspace{5cm} Petra Millarová, Michael Kala\\
 
 \end{center}
 
@@ -403,7 +403,7 @@ kde \texttt{id\_from, id\_to} jsou ID počáteční a koncové zastávky. \\
 K tabulce výsledků z výpočtu funkcí \texttt{pgr\_dijkstra} byla přes sloupec \texttt{zast\_uzel\_} připojena tabulka \texttt{zastavky}, ze které byl vypsán název zastávky. Připojena byla též tabulka \texttt{trasy} pro zobrazení linek, které daným místem projíždějí. Protože poslední uzel nemá žádnou navazující hranu, ale musí být také vypsán, byl použit \texttt{LEFT JOIN}, který zachovává všechny údaje z původní tabulky. Nakonec byl výstup seřazen podle atributu \texttt{seq}, jež udává pořadí zastávek v nalezené trase.
 \newpage
 \subsection{Ukázka aplikace}
-Aplikace lze spustit spuštěním skriptu \texttt{MMDOS.py} případně v OS Linux pomocí stand-alone spustitelného souboru \texttt{MMDOS} (v přílohách).
+Aplikace lze spustit spuštěním skriptu \texttt{MMDOS.py} (v přílohách).
 \begin{figure}[h!]
  \centering
  \includegraphics[scale=0.5]{ukazka.png}
@@ -434,7 +434,6 @@ Dalším problémem byla přítomnost záznamů linek s nočními spoji. To způ
 	\item Vytvoření tabulky s uzly - \texttt{uzly.sql}
 	\item Skript MMDOS - \texttt{MMDOS.py}
 	\item Vytvořené SQL funkce - \texttt{funkce.sql}
-	\item Stand-alone aplikace - \texttt{MMDOS}
 \end{itemize}
 
 
